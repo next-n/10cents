@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: onecent-postgres
+    environment:
+      POSTGRES_DB: credit_gateway
+      POSTGRES_USER: credit_gateway
+      POSTGRES_PASSWORD: credit_gateway
+    ports:
+      - "5432:5432"
+    volumes:
+      - onecent_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U credit_gateway -d credit_gateway"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  onecent_pgdata:
