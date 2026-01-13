@@ -1,6 +1,6 @@
-# 1CENT — Stupid-but-Serious Payment Gateway (Go)
+# 10CENTS — Stupid-but-Serious Payment Gateway (Go)
 
-**1CENT** is a deliberately over-engineered payment gateway built to demonstrate **money correctness, transactional safety, idempotency, and reliable webhook delivery**.
+**10CENTS** is a deliberately over-engineered payment gateway built to demonstrate **money correctness, transactional safety, idempotency, and reliable webhook delivery**.
 
 This is **not** a real financial product.
 It is a backend systems showcase focused on how payment systems must behave under retries, partial failures, and concurrency.
