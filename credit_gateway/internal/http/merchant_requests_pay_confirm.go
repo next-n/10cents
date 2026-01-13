@@ -111,12 +111,13 @@ func (h *MerchantRequestsHandler) PayConfirmIntent(w http.ResponseWriter, r *htt
 	}
 
 	WriteJSON(w, http.StatusOK, map[string]any{
-		"status":              "ok",
-		"merchant_request_id": mrID,
-		"payment_intent_id":   intentID.String(),
-		"paid_cents":          paid,
-		"target_cents":        target,
-		"completed_now":       completedNow,
-		"idempotent_hit":      !first,
+		"status":                     "ok",
+		"merchant_request_id":        mrID,
+		"merchant_request_reference": mr.MerchantRequestReference,
+		"payment_intent_id":          intentID.String(),
+		"paid_cents":                 paid,
+		"target_cents":               target,
+		"completed_now":              completedNow,
+		"idempotent_hit":             !first,
 	})
 }

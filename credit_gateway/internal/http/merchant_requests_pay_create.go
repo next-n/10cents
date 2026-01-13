@@ -77,10 +77,11 @@ func (h *MerchantRequestsHandler) PayCreateIntent(w http.ResponseWriter, r *http
 	}
 
 	WriteJSON(w, http.StatusCreated, map[string]any{
-		"status":              "created",
-		"merchant_request_id": mrID,
-		"payment_intent_id":   pi.ID.String(),
-		"amount_cents":        pi.Amount,
-		"intent_status":       pi.Status, // should be "pending"
+		"status":                     "created",
+		"merchant_request_id":        mrID,
+		"merchant_request_reference": mr.MerchantRequestReference,
+		"payment_intent_id":          pi.ID.String(),
+		"amount_cents":               pi.Amount,
+		"intent_status":              pi.Status, // should be "pending"
 	})
 }

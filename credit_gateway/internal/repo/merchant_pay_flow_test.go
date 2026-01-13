@@ -20,7 +20,7 @@ func createMerchantRequestRow(t *testing.T, db dbExecQuery, merchantID string, m
 
 	var id int64
 	if err := db.QueryRow(ctx, `
-insert into merchant_requests (merchant_id, merchant_request_id, payer_account_id, target_cents, webhook_url)
+insert into merchant_requests (merchant_id, merchant_request_reference, payer_account_id, target_cents, webhook_url)
 values ($1, $2, $3, $4, $5)
 returning id;
 `, merchantID, merchantRef, payerAccountID, target, "http://example.test/webhook").Scan(&id); err != nil {
@@ -247,7 +247,7 @@ func createMerchantRequestRowWithWebhook(t *testing.T, db dbExecQuery, merchantI
 
 	var id int64
 	if err := db.QueryRow(ctx, `
-insert into merchant_requests (merchant_id, merchant_request_id, payer_account_id, target_cents, webhook_url)
+insert into merchant_requests (merchant_id, merchant_request_reference, payer_account_id, target_cents, webhook_url)
 values ($1, $2, $3, $4, $5)
 returning id;
 `, merchantID, merchantRef, payerAccountID, target, webhookURL).Scan(&id); err != nil {

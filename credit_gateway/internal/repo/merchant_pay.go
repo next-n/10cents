@@ -20,7 +20,7 @@ func GetMerchantRequestByIDForUpdate(
 select
   id,
   merchant_id,
-  merchant_request_id,
+  merchant_request_reference,
   payer_account_id,
   target_cents,
   paid_cents,
@@ -37,7 +37,7 @@ for update;
 	if err := tx.QueryRow(ctx, q, id).Scan(
 		&mr.ID,
 		&mr.MerchantID,
-		&mr.MerchantRequestID,
+		&mr.MerchantRequestReference,
 		&mr.PayerAccountID,
 		&mr.TargetCents,
 		&mr.PaidCents,
@@ -62,7 +62,7 @@ func IncrementMerchantRequestProgress(
 
 	// lock + load fields needed for completion + webhook
 	const lockQ = `
-select paid_cents, target_cents, status, merchant_id, merchant_request_id, webhook_url, payer_account_id
+select paid_cents, target_cents, status, merchant_id, merchant_request_reference, webhook_url, payer_account_id
 from merchant_requests
 where id = $1
 for update;

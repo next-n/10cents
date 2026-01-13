@@ -10,25 +10,25 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var ErrDuplicateMerchantRequest = errors.New("duplicate merchant_request_id for merchant")
+var ErrDuplicateMerchantRequest = errors.New("duplicate merchant_request_reference for merchant")
 
 type MerchantRequest struct {
-	ID                int64
-	MerchantID        string
-	MerchantRequestID *string
-	TargetCents       int64
-	PaidCents         int64
-	Status            string
-	WebhookURL        *string
-	CompletedAt       *time.Time
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
-	PayerAccountID    string
+	ID                       int64
+	MerchantID               string
+	MerchantRequestReference *string
+	TargetCents              int64
+	PaidCents                int64
+	Status                   string
+	WebhookURL               *string
+	CompletedAt              *time.Time
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
+	PayerAccountID           string
 }
 
 func CreateMerchantRequest(ctx context.Context, db *pgxpool.Pool,
 	merchantID string,
-	merchantRequestID *string,
+	merchantRequestRefrence *string,
 	payerAccountID string,
 	targetCents int64,
 	webhookURL *string,
@@ -36,20 +36,20 @@ func CreateMerchantRequest(ctx context.Context, db *pgxpool.Pool,
 
 	const q = `
 insert into merchant_requests
-  (merchant_id, merchant_request_id, payer_account_id, target_cents, webhook_url)
+  (merchant_id, merchant_request_reference, payer_account_id, target_cents, webhook_url)
 values
   ($1, $2, $3, $4, $5)
 returning
-  id, merchant_id, merchant_request_id, payer_account_id, target_cents, paid_cents, status, webhook_url,
+  id, merchant_id, merchant_request_reference, payer_account_id, target_cents, paid_cents, status, webhook_url,
   completed_at, created_at, updated_at;
 `
-	row := db.QueryRow(ctx, q, merchantID, merchantRequestID, payerAccountID, targetCents, webhookURL)
+	row := db.QueryRow(ctx, q, merchantID, merchantRequestRefrence, payerAccountID, targetCents, webhookURL)
 
 	var mr MerchantRequest
 	if err := row.Scan(
 		&mr.ID,
 		&mr.MerchantID,
-		&mr.MerchantRequestID,
+		&mr.MerchantRequestReference,
 		&mr.PayerAccountID,
 		&mr.TargetCents,
 		&mr.PaidCents,
@@ -72,7 +72,7 @@ returning
 func GetMerchantRequestByID(ctx context.Context, db *pgxpool.Pool, id int64) (*MerchantRequest, error) {
 	const q = `
 select
-  id, merchant_id, merchant_request_id, payer_account_id, target_cents, paid_cents, status, webhook_url,
+  id, merchant_id, merchant_request_reference, payer_account_id, target_cents, paid_cents, status, webhook_url,
   completed_at, created_at, updated_at
 from merchant_requests
 where id = $1
@@ -84,7 +84,7 @@ limit 1;
 	if err := row.Scan(
 		&mr.ID,
 		&mr.MerchantID,
-		&mr.MerchantRequestID,
+		&mr.MerchantRequestReference,
 		&mr.PayerAccountID,
 		&mr.TargetCents,
 		&mr.PaidCents,

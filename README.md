@@ -153,27 +153,183 @@ credit_gateway/
 │  ├─ domain/             # money & interest rules
 │  ├─ outbox/             # webhook outbox + worker
 │  └─ config/
-└─ migrations/            # goose SQL migrations
+├─ migrations/            # goose SQL migrations
+└─ tests/ (co-located)    # banking-level tests
 ```
 
 ---
 
-## Testing Strategy
+## Quick Start (Run & Test)
 
-* Separate **test database**
-* Real PostgreSQL (no mocks for money logic)
-* Full transactional tests:
+### 0) Start Postgres
 
-  * interest correctness
-  * insufficient credit handling
-  * account locking
-  * idempotent confirms
-  * merchant fulfillment
-  * webhook enqueue guarantees
-
-Run tests:
+From repo root:
 
 ```bash
+docker compose up -d
+```
+
+### 1) Run migrations
+
+From `credit_gateway/`:
+
+```bash
+export GOOSE_DRIVER=postgres
+export GOOSE_DBSTRING="postgres://credit_gateway:credit_gateway@localhost:5432/credit_gateway?sslmode=disable"
+goose -dir migrations up
+```
+
+### 2) Run the gateway
+
+From `credit_gateway/`:
+
+```bash
+go run ./cmd/gateway
+```
+
+### 3) (Optional) Run the webhook receiver
+
+In another terminal, from `credit_gateway/`:
+
+```bash
+go run ./cmd/webhook_receiver
+```
+
+---
+
+## Manual Test Recipe (Curl + SQL)
+
+### A) Reset DB to a clean state
+
+Run this in `psql` (connected to `credit_gateway` DB):
+
+```sql
+TRUNCATE TABLE
+  webhook_outbox,
+  merchant_pay_intents,
+  ledger_entries,
+  payment_intents,
+  merchant_requests,
+  accounts
+RESTART IDENTITY
+CASCADE;
+```
+
+### B) Create an account
+
+```sql
+INSERT INTO accounts (
+  id,
+  status,
+  credit_limit_cents,
+  balance_cents,
+  spent_cents,
+  attempt_count
+)
+VALUES (
+  '00000000-0000-0000-0000-000000000001',
+  'active',
+  5000,
+  0,
+  0,
+  0
+);
+```
+
+---
+
+## Normal Payment Flow
+
+### 1) Create a payment intent (example: 5 cents)
+
+```bash
+curl -s -X POST http://localhost:8083/v1/payment_intents \
+  -H "Content-Type: application/json" \
+  -d '{"account_id":"00000000-0000-0000-0000-000000000001","amount_cents":5}'
+```
+
+Copy the returned `id`.
+
+### 2) Confirm the intent
+
+```bash
+curl -s -X POST http://localhost:8083/v1/payment_intents/<INTENT_ID>/confirm
+```
+
+### 3) Try an invalid amount (example: 11 cents)
+
+This should refuse and apply the flat $10 fine.
+
+```bash
+curl -s -X POST http://localhost:8083/v1/payment_intents \
+  -H "Content-Type: application/json" \
+  -d '{"account_id":"00000000-0000-0000-0000-000000000001","amount_cents":11}'
+
+curl -s -X POST http://localhost:8083/v1/payment_intents/<INTENT_ID>/confirm
+```
+
+---
+
+## Merchant Payment Flow (Two-Step)
+
+### 1) Create merchant request
+
+```bash
+curl -s -X POST http://localhost:8083/v1/merchant_requests \
+  -H "Content-Type: application/json" \
+  -d '{
+    "merchant_id": "merchant_test",
+    "merchant_request_reference": "order_001",
+    "payer_account_id": "00000000-0000-0000-0000-000000000001",
+    "target_cents": 20,
+    "webhook_url": "http://localhost:8090/webhook"
+  }'
+```
+
+Copy the returned gateway `id` (example: `1`).
+
+### 2) Create a merchant pay intent (fixed 10 cents)
+
+```bash
+curl -s -X POST http://localhost:8083/v1/merchant_requests/1/pay
+```
+
+Copy the returned `payment_intent_id`.
+
+### 3) Confirm the merchant pay intent
+
+```bash
+curl -s -X POST http://localhost:8083/v1/merchant_requests/payment_intents/<PAYMENT_INTENT_ID>/confirm
+```
+
+Repeat steps (2) + (3) until `paid_cents == target_cents`.
+
+When completed, the gateway enqueues an outbox event and the webhook receiver prints the delivered payload.
+
+---
+
+## Run Tests (with separate test DB)
+
+### 1) Create test DB
+
+Create `credit_gateway_test` in Postgres (one-time):
+
+```sql
+CREATE DATABASE credit_gateway_test;
+```
+
+### 2) Run migrations on test DB
+
+```bash
+export GOOSE_DRIVER=postgres
+export GOOSE_DBSTRING="postgres://credit_gateway:credit_gateway@localhost:5432/credit_gateway_test?sslmode=disable"
+goose -dir migrations up
+```
+
+### 3) Run tests
+
+```bash
+export TEST_DB_DSN="postgres://credit_gateway:credit_gateway@localhost:5432/credit_gateway_test?sslmode=disable"
 go test ./... -count=1
 ```
 

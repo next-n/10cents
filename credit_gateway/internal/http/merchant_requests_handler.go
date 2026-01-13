@@ -16,11 +16,11 @@ type MerchantRequestsHandler struct {
 }
 
 type createMerchantRequestReq struct {
-	MerchantID        string  `json:"merchant_id"`
-	MerchantRequestID *string `json:"merchant_request_id"`
-	TargetCents       int64   `json:"target_cents"`
-	WebhookURL        *string `json:"webhook_url"`
-	PayerAccountID    string  `json:"payer_account_id"`
+	MerchantID              string  `json:"merchant_id"`
+	MerchantRequestRefrence *string `json:"merchant_request_reference"`
+	TargetCents             int64   `json:"target_cents"`
+	WebhookURL              *string `json:"webhook_url"`
+	PayerAccountID          string  `json:"payer_account_id"`
 }
 
 func (h *MerchantRequestsHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -47,14 +47,14 @@ func (h *MerchantRequestsHandler) Create(w http.ResponseWriter, r *http.Request)
 		r.Context(),
 		h.DB,
 		req.MerchantID,
-		req.MerchantRequestID,
+		req.MerchantRequestRefrence,
 		req.PayerAccountID,
 		req.TargetCents,
 		req.WebhookURL,
 	)
 	if err != nil {
 		if err == repo.ErrDuplicateMerchantRequest {
-			WriteError(w, http.StatusConflict, "duplicate merchant_request_id")
+			WriteError(w, http.StatusConflict, "duplicate merchant_request_reference")
 			return
 		}
 		// if payer_account_id FK fails, Postgres returns 23503
@@ -65,7 +65,7 @@ func (h *MerchantRequestsHandler) Create(w http.ResponseWriter, r *http.Request)
 	WriteJSON(w, http.StatusCreated, map[string]any{
 		"id":                         mr.ID,
 		"merchant_id":                mr.MerchantID,
-		"merchant_request_reference": mr.MerchantRequestID,
+		"merchant_request_reference": mr.MerchantRequestReference,
 		"payer_account_id":           mr.PayerAccountID,
 		"target_cents":               mr.TargetCents,
 		"paid_cents":                 mr.PaidCents,
@@ -96,7 +96,7 @@ func (h *MerchantRequestsHandler) GetByID(w http.ResponseWriter, r *http.Request
 	WriteJSON(w, http.StatusOK, map[string]any{
 		"id":                         mr.ID,
 		"merchant_id":                mr.MerchantID,
-		"merchant_request_reference": mr.MerchantRequestID,
+		"merchant_request_reference": mr.MerchantRequestReference,
 		"target_cents":               mr.TargetCents,
 		"paid_cents":                 mr.PaidCents,
 		"status":                     mr.Status,
